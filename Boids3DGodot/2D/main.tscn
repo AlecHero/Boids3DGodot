@@ -11,6 +11,11 @@ shader_parameter/scale = 0.5
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_ig7tw")
+friend_radius = 34.456
+min_vel = 100.0
+max_vel = 100.0
+alignment_factor = 25.791
+separation_factor = 100.0
 
 [node name="BoidParticles" type="GPUParticles2D" parent="."]
 texture_filter = 1

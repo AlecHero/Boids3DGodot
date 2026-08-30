@@ -48,7 +48,7 @@ func _ready() -> void:
 		]
 	
 	slider_menu.add_sliders(slider_list)
-	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	#Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	General.viewing_changed.connect(func(state): visible = !state)
 
 

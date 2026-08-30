@@ -1,6 +1,6 @@
 extends Node2D
 
-const NUM_BOIDS : int = 5_000
+const NUM_BOIDS : int = 10000
 var boid_pos = []
 var boid_vel = []
 
@@ -69,42 +69,59 @@ func _update_data_texture():
 	boid_data_texture.update(boid_data)
 
 
+func _steer_toward(target: Vector2, heading: Vector2) -> Vector2:
+	var tlen := target.length()
+	if tlen < 1e-5: return Vector2.ZERO
+	var desired : Vector2 = target / tlen * max_vel
+	var v := desired - heading
+	var mag := v.length()
+	v = v.normalized() * min(mag, steer_factor) if (mag > 1e-5) else Vector2.ZERO
+	return v
+
+
 func _update_boids_cpu(delta):
 	for i in NUM_BOIDS:
-		var my_pos = boid_pos[i]
-		var my_vel = boid_vel[i]
-		var avg_vel = Vector2.ZERO
-		var midpoint = Vector2.ZERO
+		var my_pos : Vector2 = boid_pos[i]
+		var my_vel : Vector2 = boid_vel[i]
+		var flock_heading = Vector2.ZERO
+		var flock_center = Vector2.ZERO
 		var separation_vec = Vector2.ZERO
-		var num_friends = 0
-		var num_avoids = 0
-		for j in NUM_BOIDS:
-			if i != j:
-				var other_pos = boid_pos[j]
-				var other_vel = boid_vel[j]
-				var dist = my_pos.distance_to(other_pos)
-				if(dist < friend_radius):
-					num_friends += 1
-					avg_vel += other_vel
-					midpoint += other_pos
-					if(dist < avoid_radius):
-						num_avoids += 1
-						separation_vec += my_pos - other_pos
-					
-		if(num_friends > 0):
-			avg_vel /= num_friends
-			my_vel += avg_vel.normalized() * alignment_factor
-			
-			midpoint /= num_friends
-			my_vel += (midpoint - my_pos).normalized() * cohesion_factor
-			
-			if(num_avoids > 0):
-				my_vel += separation_vec.normalized() * separation_factor
+		var friends : int = 0
 		
-		var vel_mag = my_vel.length()
-		vel_mag = clamp(vel_mag, min_vel, max_vel)
-		my_vel = my_vel.normalized() * vel_mag
-		my_pos += my_vel * delta
+		for j in NUM_BOIDS:
+			if i == j: continue
+			var other_pos = boid_pos[j]
+			var offset : Vector2 = other_pos - my_pos
+			var sq_dist = offset.x * offset.x + offset.y * offset.y
+			
+			if(sq_dist < friend_radius * friend_radius):
+				var other_vel : Vector2 = boid_vel[j]
+				flock_heading += other_vel.normalized();
+				flock_center += other_pos;
+				friends += 1
+				
+				if(sq_dist < avoid_radius * avoid_radius):
+					separation_vec -= offset / max(sq_dist, 0.001)
+		
+		var acceleration := Vector2.ZERO
+		
+		if friends > 0:
+			flock_center /= friends
+			var flock_offset = flock_center - my_pos
+			
+			acceleration += _steer_toward(flock_heading, my_vel) * alignment_factor
+			acceleration += _steer_toward(flock_offset, my_vel) * cohesion_factor
+			acceleration += _steer_toward(separation_vec, my_vel) * separation_factor
+		
+		var dt : float = delta * time_scale
+		
+		my_vel += acceleration * dt
+		var speed : float = my_vel.length()
+		var dir : Vector2 = my_vel.normalized()
+		speed = clampf(speed, min_vel, max_vel)
+		my_vel = dir * speed
+		my_pos += my_vel * dt
+		
 		my_pos = Vector2(wrapf(my_pos.x, 0, get_viewport_rect().size.x,),
 						 wrapf(my_pos.y, 0, get_viewport_rect().size.y,))
 		

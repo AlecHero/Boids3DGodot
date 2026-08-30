@@ -10,10 +10,10 @@ config_version=5
 
 [application]
 
-config/name="BoidCompute"
+config/name="Boids3DCompute"
 run/main_scene="uid://baq47jb3rp0up"
 config/features=PackedStringArray("4.4", "Forward Plus")
-config/icon="uid://c8uds6ydr21ve"
+config/icon="uid://c57bch37mchvm"
 
 [autoload]
 
